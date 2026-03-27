@@ -307,7 +307,7 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
     Geometry: folder({
       count: { value: 600, min: 100, max: 2000, step: 10 },
       connectDistance: { value: 25, min: 10, max: 80, step: 1 },
-      particleSize: { value: 1.5, min: 0.1, max: 20, step: 0.1 },
+      particleSize: { value: 2, min: 0.1, max: 20, step: 0.1 },
     }),
     Motion: folder({
       initialRotationX: { value: 0, min: 0, max: 360, step: 1, label: "Initial Angle X°" },
@@ -317,7 +317,7 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
     }),
     Colors: folder({
       baseColor: '#00d2ff',
-      lineColor: '#535353',
+      lineColor: '#9a9a9a',
     })
   });
 
@@ -327,7 +327,7 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
         value: json,
         editable: false,
         label: "JSON",
-        rows: 15
+        rows: 5
      }
   });
 
