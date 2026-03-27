@@ -7,53 +7,21 @@ import { useMockData } from '../hooks/useMockData'
 import { motion, AnimatePresence } from 'framer-motion'
 
 function HologramScene({ 
-   count, connectDist, particleSize, 
-   initialRotationX, initialRotationY, rotationSpeedX, rotationSpeedY, 
+   count, connectDist, particleSize, sphereSize,
+   rotationSpeedX, rotationSpeedY, 
    baseColor, lineColor, members, isDarkMode 
 }: any) {
   const groupRef = useRef<THREE.Group>(null!)
   const pointsRef = useRef<THREE.Points>(null!)
   const linesRef = useRef<THREE.LineSegments>(null!)
-  
-  // Create a dictionary of Tracker Refs to perfectly track each hovered particle
   const trackersRef = useRef<Map<number, THREE.Group>>(new Map())
 
   const circleTexture = useMemo(() => new THREE.TextureLoader().load('/Images/dotTexture.png'), [])
 
-  const positions = useMemo(() => new Float32Array(count * 3), [count])
-  const colors = useMemo(() => new Float32Array(count * 3), [count])
-  const originalPositions = useMemo(() => new Float32Array(count * 3), [count])
-  const targetPositions = useRef<Float32Array>(new Float32Array(count * 3))
-  const velocities = useRef<Float32Array>(new Float32Array(count * 3).fill(0))
-
-  const [hoveredEntityIndices, setHoveredEntityIndices] = useState<number[]>([])
-
-  const mouse = useRef({ x: 0, y: 0 })
-  const hoverRadius = 0.15
-  const maxOutward = 20
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1
-      mouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
-
-  const { lineIndices, lineColors } = useMemo(() => {
-    // Default fallback colors based on theme if the default is left untouched
-    const defaultParticleColor = isDarkMode ? baseColor : (baseColor === '#00d2ff' ? '#111111' : baseColor)
-    const defaultLineColor = isDarkMode ? lineColor : (lineColor === '#535353' ? '#c0c0c0' : lineColor)
-
-    const c1 = new THREE.Color(defaultParticleColor)
-    const c2 = c1.clone().offsetHSL(0.05, 0, 0)
-    const c3 = c1.clone().offsetHSL(-0.05, 0, 0)
-    const palette = [c1, c2, c3]
-
-    const indices: number[] = []
-    const lineColorsArr: number[] = []
-
+  // ---------- 1. Static Geometry Arrays ----------
+  const { positions, originalPositions } = useMemo(() => {
+    const pos = new Float32Array(count * 3)
+    const orig = new Float32Array(count * 3)
     for (let i = 0; i < count; i++) {
       const theta = Math.random() * Math.PI * 2
       const phi = (1 - Math.sqrt(Math.random())) * Math.PI / 2 * (Math.random() > 0.5 ? 1 : -1)
@@ -61,21 +29,45 @@ function HologramScene({
       const x = Math.cos(theta) * Math.cos(phi) * radius
       const y = Math.sin(phi) * radius
       const z = Math.sin(theta) * Math.cos(phi) * radius
-
-      positions[i * 3] = x
-      positions[i * 3 + 1] = y
-      positions[i * 3 + 2] = z
-      originalPositions[i * 3] = x
-      originalPositions[i * 3 + 1] = y
-      originalPositions[i * 3 + 2] = z
-      targetPositions.current[i * 3] = x
-      targetPositions.current[i * 3 + 1] = y
-      targetPositions.current[i * 3 + 2] = z
-
-      palette[Math.floor(Math.random() * palette.length)].toArray(colors, i * 3)
+      
+      pos[i * 3] = x
+      pos[i * 3 + 1] = y
+      pos[i * 3 + 2] = z
+      orig[i * 3] = x
+      orig[i * 3 + 1] = y
+      orig[i * 3 + 2] = z
     }
+    return { positions: pos, originalPositions: orig }
+  }, [count])
 
-    const colLine = new THREE.Color(defaultLineColor)
+  const targetPositions = useRef<Float32Array>(new Float32Array(count * 3))
+  const velocities = useRef<Float32Array>(new Float32Array(count * 3).fill(0))
+
+  useEffect(() => {
+    targetPositions.current.set(originalPositions)
+    velocities.current.fill(0)
+  }, [originalPositions])
+
+  // ---------- 2. Colors ----------
+  const colors = useMemo(() => new Float32Array(count * 3), [count])
+  
+  useEffect(() => {
+     const c1 = new THREE.Color(baseColor)
+     const c2 = c1.clone().offsetHSL(0.05, 0, 0)
+     const c3 = c1.clone().offsetHSL(-0.05, 0, 0)
+     const palette = [c1, c2, c3]
+     
+     for (let i = 0; i < count; i++) {
+        palette[Math.floor(Math.random() * palette.length)].toArray(colors, i * 3)
+     }
+     if (pointsRef.current) {
+        pointsRef.current.geometry.attributes.color.needsUpdate = true
+     }
+  }, [count, baseColor])
+
+  // ---------- 3. Connective Lines ----------
+  const { lineIndices, linePositions } = useMemo(() => {
+    const indices: number[] = []
     for (let i = 0; i < count; i++) {
       for (let j = i + 1; j < count; j++) {
         const dx = positions[i * 3] - positions[j * 3]
@@ -83,20 +75,28 @@ function HologramScene({
         const dz = positions[i * 3 + 2] - positions[j * 3 + 2]
         if (dx * dx + dy * dy + dz * dz < connectDist * connectDist) {
           indices.push(i, j)
-          lineColorsArr.push(
-            colLine.r, colLine.g, colLine.b,
-            colLine.r, colLine.g, colLine.b
-          )
         }
       }
     }
+    return { 
+       lineIndices: indices, 
+       linePositions: new Float32Array(indices.length * 3) 
+    }
+  }, [count, connectDist, positions])
 
-    return { lineIndices: indices, lineColors: new Float32Array(lineColorsArr) }
-  }, [count, connectDist, baseColor, lineColor, isDarkMode])
+  const lineColors = useMemo(() => new Float32Array(lineIndices.length * 3), [lineIndices])
 
-  const linePositions = useMemo(() => new Float32Array(lineIndices.length * 3), [lineIndices])
+  useEffect(() => {
+     const lCol = new THREE.Color(lineColor)
+     for (let i = 0; i < lineColors.length; i += 3) {
+        lineColors[i] = lCol.r; lineColors[i + 1] = lCol.g; lineColors[i + 2] = lCol.b
+     }
+     if (linesRef.current && linesRef.current.geometry.attributes.color) {
+        linesRef.current.geometry.attributes.color.needsUpdate = true
+     }
+  }, [lineIndices.length, lineColor])
 
-  // Assign members
+  // ---------- Members & Interactions ----------
   const memberIndexMap = useMemo(() => {
     const indices = Array.from({ length: count }, (_, i) => i)
     for (let i = indices.length - 1; i > 0; i--) {
@@ -111,7 +111,20 @@ function HologramScene({
     return map
   }, [count, members])
 
-  // Track elapsed rotation over time
+  const [hoveredEntityIndices, setHoveredEntityIndices] = useState<number[]>([])
+  const mouse = useRef({ x: 0, y: 0 })
+  const hoverRadius = 0.15
+  const maxOutward = 20
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1
+      mouse.current.y = -(e.clientY / window.innerHeight) * 2 + 1
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
   const timeX = useRef(0)
   const timeY = useRef(0)
 
@@ -119,9 +132,11 @@ function HologramScene({
     timeX.current += rotationSpeedX
     timeY.current += rotationSpeedY
 
-    // Apply strict combinations of initial configurable degree rotation + continual time rotation
-    groupRef.current.rotation.x = (initialRotationX * Math.PI / 180) + timeX.current
-    groupRef.current.rotation.y = (initialRotationY * Math.PI / 180) + timeY.current
+    groupRef.current.rotation.x = timeX.current
+    groupRef.current.rotation.y = timeY.current
+
+    // Explicitly update matrices so interactions align natively with rotations and scale
+    groupRef.current.updateMatrixWorld()
 
     if (!pointsRef.current || !linesRef.current) return
 
@@ -132,14 +147,18 @@ function HologramScene({
 
     for (let i = 0; i < count; i++) {
       const idx = i * 3
-      vec.set(originalPositions[idx], originalPositions[idx + 1], originalPositions[idx + 2]).project(camera)
+      
+      // Calculate TRUE World Coordinates mapping against the rotating/scaling group matrix
+      vec.set(originalPositions[idx], originalPositions[idx + 1], originalPositions[idx + 2])
+      vec.applyMatrix4(groupRef.current.matrixWorld)
+      vec.project(camera)
+
       const dx = vec.x - mouse.current.x
       const dy = vec.y - mouse.current.y
       const distSq = dx * dx + dy * dy
       
       const outward = distSq < hoverRadius * hoverRadius ? maxOutward : 0
       
-      // Calculate how far the particle is currently physically from its home position
       const dxOrigin = pos[idx] - originalPositions[idx]
       const dyOrigin = pos[idx + 1] - originalPositions[idx + 1]
       const dzOrigin = pos[idx + 2] - originalPositions[idx + 2]
@@ -171,8 +190,6 @@ function HologramScene({
       pos[idx + 2] = targetPositions.current[idx + 2]
     }
     
-    // Check if the array of hovered indices has changed purely by length and items
-    // to avoid excessive re-renders
     let isChanged = false
     if (newHoveredIndices.length !== hoveredEntityIndices.length) {
        isChanged = true
@@ -189,15 +206,10 @@ function HologramScene({
        setHoveredEntityIndices(newHoveredIndices)
     }
 
-    // Explicitly update ALL our tracker groups so the HTML dialogs accurately stick to their particles 
     hoveredEntityIndices.forEach(index => {
        const tracker = trackersRef.current.get(index)
        if (tracker) {
-          tracker.position.set(
-             pos[index * 3],
-             pos[index * 3 + 1],
-             pos[index * 3 + 2]
-          )
+          tracker.position.set(pos[index * 3], pos[index * 3 + 1], pos[index * 3 + 2])
        }
     })
 
@@ -219,9 +231,8 @@ function HologramScene({
     attr.needsUpdate = true
   })
 
-  // Set the precise PointsMaterial property: `size` mapped to the destructured `particleSize`
   return (
-    <group ref={groupRef} scale={1} position-y={0}>
+    <group ref={groupRef} scale={sphereSize} position-y={0}>
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
@@ -293,33 +304,39 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
   const { entities, json } = useMockData();
 
   // Define Leva controls
-  const { 
+  const [{ 
     count, 
     connectDistance, 
     particleSize, 
-    initialRotationX,
-    initialRotationY,
+    sphereSize,
     rotationSpeedX, 
     rotationSpeedY,
     baseColor,
     lineColor
-  } = useControls('Sphere Settings', {
+  }, set] = useControls('Sphere Settings', () => ({
     Geometry: folder({
       count: { value: 600, min: 100, max: 2000, step: 10 },
       connectDistance: { value: 25, min: 10, max: 80, step: 1 },
       particleSize: { value: 2, min: 0.1, max: 20, step: 0.1 },
+      sphereSize: { value: 1, min: 0.5, max: 3, step: 0.1 }
     }),
     Motion: folder({
-      initialRotationX: { value: 0, min: 0, max: 360, step: 1, label: "Initial Angle X°" },
-      initialRotationY: { value: 0, min: 0, max: 360, step: 1, label: "Initial Angle Y°" },
       rotationSpeedX: { value: 0.0005, min: -0.05, max: 0.05, step: 0.0001, label: "Speed X" },
       rotationSpeedY: { value: 0.002, min: -0.05, max: 0.05, step: 0.0001, label: "Speed Y" },
     }),
     Colors: folder({
       baseColor: '#00d2ff',
-      lineColor: '#9a9a9a',
+      lineColor: '#535353',
     })
-  });
+  }));
+
+  // Automatically update Leva interface natively when toggling Application Theme
+  useEffect(() => {
+     set({
+        baseColor: isDarkMode ? '#00d2ff' : '#0a0a0a',
+        lineColor: isDarkMode ? '#535353' : '#a0a0a0'
+     })
+  }, [isDarkMode, set])
 
   // Display JSON in Leva
   useControls('Mock Data Source', {
@@ -331,7 +348,6 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
      }
   });
 
-  // Scale guard boundary overlay
   if (count < entities.length) {
      throw new Error("Particles count must be high then entities count");
   }
@@ -341,14 +357,12 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
       <Canvas camera={{ position: [0, 0, 350], fov: 50 }}>
         <ambientLight intensity={isDarkMode ? 0.5 : 1.5} />
         <pointLight position={[10, 10, 10]} intensity={isDarkMode ? 1 : 2} />
-        {/* Pass complex key so altering connection limits forcefully rebuilds WebGL buffers */}
         <HologramScene 
           key={`${count}-${connectDistance}`}
           count={count} 
           connectDist={connectDistance} 
-          particleSize={particleSize} 
-          initialRotationX={initialRotationX}
-          initialRotationY={initialRotationY}
+          particleSize={particleSize}
+          sphereSize={sphereSize}
           rotationSpeedX={rotationSpeedX}
           rotationSpeedY={rotationSpeedY}
           baseColor={baseColor}
