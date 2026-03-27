@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState, useEffect } from 'react'
+import { useRef, useMemo, useState, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
@@ -139,8 +139,13 @@ function HologramScene({
       
       const outward = distSq < hoverRadius * hoverRadius ? maxOutward : 0
       
-      // If it's a member and within tight hover radius, track it for HTML popup
-      if (memberIndexMap[i] && distSq < 0.005) {
+      // Calculate how far the particle is currently physically from its home position
+      const dxOrigin = pos[idx] - originalPositions[idx]
+      const dyOrigin = pos[idx + 1] - originalPositions[idx + 1]
+      const dzOrigin = pos[idx + 2] - originalPositions[idx + 2]
+      const distFromOriginSq = dxOrigin * dxOrigin + dyOrigin * dyOrigin + dzOrigin * dzOrigin
+      
+      if (memberIndexMap[i] && distFromOriginSq > 100.0) {
          newHoveredIndices.push(i)
       }
 
