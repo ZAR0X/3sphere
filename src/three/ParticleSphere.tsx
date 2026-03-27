@@ -132,7 +132,7 @@ function HologramScene({
     timeX.current += rotationSpeedX
     timeY.current += rotationSpeedY
 
-    groupRef.current.rotation.x = timeX.current
+    groupRef.current.rotation.x = timeX.current 
     groupRef.current.rotation.y = timeY.current
 
     // Explicitly update matrices so interactions align natively with rotations and scale
