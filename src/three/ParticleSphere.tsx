@@ -18,6 +18,8 @@ function HologramScene({
 
   const circleTexture = useMemo(() => new THREE.TextureLoader().load('/Images/dotTexture.png'), [])
 
+
+  {console.log(members.length)}
   // ---------- 1. Static Geometry Arrays ----------
   const { positions, originalPositions } = useMemo(() => {
     const pos = new Float32Array(count * 3)
@@ -339,18 +341,17 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
   }, [isDarkMode, set])
 
   // Display JSON in Leva
-  useControls('Mock Data Source', {
-     data: {
-        value: json,
-        editable: false,
-        label: "JSON",
-        rows: 5
-     }
+  useControls('Mock Data', {
+    Entity: folder({
+      count: { value: 100, min: 1, max: 2000, step: 1, label: "count" },
+    }),
   });
 
-  if (count < entities.length) {
-     throw new Error("Particles count must be high then entities count");
-  }
+  // if (count < entities.length) {
+  //    throw new Error("Particles count must be high then entities count");
+  // }
+  {console.log(entities.length)}
+  {console.log(entities.slice(0, count).length)}
 
   return (
     <div className="w-full h-full relative">
@@ -367,7 +368,7 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
           rotationSpeedY={rotationSpeedY}
           baseColor={baseColor}
           lineColor={lineColor}
-          members={entities} 
+          members={entities.slice(0, count)} 
           isDarkMode={isDarkMode}
         />
       </Canvas>

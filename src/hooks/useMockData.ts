@@ -50,7 +50,7 @@ export function useMockData() {
   const lastNames = [...new Set(people.map(p => p.last))];
  
   // Generate 100 mock entities with true random selection
-  const mockEntities: Entity[] = Array.from({ length: 100 }).map((_, i) => ({
+  const mockEntities: Entity[] = Array.from({ length: 2000 }).map((_, i) => ({
     id: (i + 1).toString(),
     name: `${getRandomElement(firstNames)} ${getRandomElement(lastNames)}`,
     role: getRandomElement(roles),
