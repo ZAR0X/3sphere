@@ -5,8 +5,13 @@ import * as THREE from 'three'
 import { useControls, folder } from 'leva'
 import { useMockData } from '../hooks/useMockData'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AlertCircle } from 'lucide-react'
 
-function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeedY, baseColor, lineColor, members, isDarkMode }: any) {
+function HologramScene({ 
+   count, connectDist, particleSize, 
+   initialRotationX, initialRotationY, rotationSpeedX, rotationSpeedY, 
+   baseColor, lineColor, members, isDarkMode 
+}: any) {
   const groupRef = useRef<THREE.Group>(null!)
   const pointsRef = useRef<THREE.Points>(null!)
   const linesRef = useRef<THREE.LineSegments>(null!)
@@ -107,9 +112,17 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
     return map
   }, [count, members])
 
+  // Track elapsed rotation over time
+  const timeX = useRef(0)
+  const timeY = useRef(0)
+
   useFrame(({ camera }) => {
-    groupRef.current.rotation.y += rotationSpeedY
-    groupRef.current.rotation.x += rotationSpeedX
+    timeX.current += rotationSpeedX
+    timeY.current += rotationSpeedY
+
+    // Apply strict combinations of initial configurable degree rotation + continual time rotation
+    groupRef.current.rotation.x = (initialRotationX * Math.PI / 180) + timeX.current
+    groupRef.current.rotation.y = (initialRotationY * Math.PI / 180) + timeY.current
 
     if (!pointsRef.current || !linesRef.current) return
 
@@ -163,7 +176,6 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
     }
 
     // Explicitly update our tracker group so the HTML dialog accurately sticks to the particle 
-    // even during animation and rotation 
     if (hoveredEntityIndex !== null && trackerRef.current) {
        trackerRef.current.position.set(
           pos[hoveredEntityIndex * 3],
@@ -190,6 +202,7 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
     attr.needsUpdate = true
   })
 
+  // Set the precise PointsMaterial property: `size` mapped to the destructured `particleSize`
   return (
     <group ref={groupRef} scale={1} position-y={0}>
       <points ref={pointsRef}>
@@ -197,7 +210,7 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
           <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial size={size} vertexColors sizeAttenuation map={circleTexture} transparent alphaTest={0.5} />
+        <pointsMaterial size={particleSize} vertexColors sizeAttenuation map={circleTexture} transparent alphaTest={0.5} />
       </points>
 
       <lineSegments ref={linesRef}>
@@ -228,10 +241,7 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
                           ? 'bg-black/40 border-white/10 text-white shadow-cyan-900/20' 
                           : 'bg-white/40 border-black/10 text-black shadow-zinc-300/40'
                       }`}
-                      style={{ 
-                         // Glassmorphism effect 
-                         boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)' 
-                      }}
+                      style={{ boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}
                     >
                       {/* Triangle Pointer down to particle */}
                       <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b backdrop-blur-xl ${
@@ -266,19 +276,23 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
     count, 
     connectDistance, 
     particleSize, 
+    initialRotationX,
+    initialRotationY,
     rotationSpeedX, 
     rotationSpeedY,
     baseColor,
     lineColor
   } = useControls('Sphere Settings', {
     Geometry: folder({
-      count: { value: 600, min: 100, max: 2000, step: 50 },
+      count: { value: 600, min: 100, max: 2000, step: 10 },
       connectDistance: { value: 25, min: 10, max: 80, step: 1 },
-      particleSize: { value: 3, min: 1, max: 10, step: 0.5 },
+      particleSize: { value: 1.5, min: 0.1, max: 20, step: 0.1 },
     }),
     Motion: folder({
-      rotationSpeedX: { value: 0.0005, min: 0, max: 0.01, step: 0.0001 },
-      rotationSpeedY: { value: 0.002, min: 0, max: 0.01, step: 0.0001 },
+      initialRotationX: { value: 0, min: 0, max: 360, step: 1, label: "Initial Angle X°" },
+      initialRotationY: { value: 0, min: 0, max: 360, step: 1, label: "Initial Angle Y°" },
+      rotationSpeedX: { value: 0.0005, min: -0.05, max: 0.05, step: 0.0001, label: "Speed X" },
+      rotationSpeedY: { value: 0.002, min: -0.05, max: 0.05, step: 0.0001, label: "Speed Y" },
     }),
     Colors: folder({
       baseColor: '#00d2ff',
@@ -296,17 +310,24 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
      }
   });
 
+  // Scale guard boundary overlay
+  if (count < entities.length) {
+     throw new Error("Particles count must be high then entities count");
+  }
+
   return (
     <div className="w-full h-full relative">
       <Canvas camera={{ position: [0, 0, 350], fov: 50 }}>
         <ambientLight intensity={isDarkMode ? 0.5 : 1.5} />
         <pointLight position={[10, 10, 10]} intensity={isDarkMode ? 1 : 2} />
-        {/* Pass count as key to completely regenerate internal buffers on geometry change */}
+        {/* Pass complex key so altering connection limits forcefully rebuilds WebGL buffers */}
         <HologramScene 
-          key={count}
+          key={`${count}-${connectDistance}`}
           count={count} 
           connectDist={connectDistance} 
           particleSize={particleSize} 
+          initialRotationX={initialRotationX}
+          initialRotationY={initialRotationY}
           rotationSpeedX={rotationSpeedX}
           rotationSpeedY={rotationSpeedY}
           baseColor={baseColor}
