@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 function HologramScene({ 
    count, connectDist, particleSize, sphereSize,
    rotationSpeedX, rotationSpeedY, 
-   baseColor, lineColor, members, isDarkMode 
+   baseColor, lineColor, members, isDarkMode, entityScale
 }: any) {
   const groupRef = useRef<THREE.Group>(null!)
   const pointsRef = useRef<THREE.Points>(null!)
@@ -18,8 +18,6 @@ function HologramScene({
 
   const circleTexture = useMemo(() => new THREE.TextureLoader().load('/Images/dotTexture.png'), [])
 
-
-  {console.log(members.length)}
   // ---------- 1. Static Geometry Arrays ----------
   const { positions, originalPositions } = useMemo(() => {
     const pos = new Float32Array(count * 3)
@@ -268,9 +266,9 @@ function HologramScene({
             >
               <AnimatePresence>
                  <motion.div
-                   initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                   animate={{ opacity: 1, scale: 1, y: -25 }}
-                   exit={{ opacity: 0, scale: 0.8, y: 0 }}
+                   initial={{ opacity: 0, scale: 0.2, y: 10 }}
+                   animate={{ opacity: 1, scale: entityScale, y: -25 }}
+                   exit={{ opacity: 0, scale: 0.2, y: 0 }}
                    className={`relative px-4 py-2 rounded-lg backdrop-blur-xl border shadow-xl w-max flex items-center justify-center gap-2 ${
                      isDarkMode 
                        ? 'bg-black/40 border-white/10 text-white shadow-cyan-900/20' 
@@ -317,10 +315,10 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
     lineColor
   }, set] = useControls('Sphere Settings', () => ({
     Geometry: folder({
-      count: { value: 600, min: 100, max: 2000, step: 10 },
-      connectDistance: { value: 25, min: 10, max: 80, step: 1 },
-      particleSize: { value: 2, min: 0.1, max: 20, step: 0.1 },
-      sphereSize: { value: 1, min: 0.5, max: 3, step: 0.1 }
+      count: { value: 600, min: 100, max: 2000, step: 10, label: "Count" },
+      connectDistance: { value: 20, min: 10, max: 100, step: 1, label: "Connect Distance" },
+      particleSize: { value: 2, min: 0.1, max: 20, step: 0.1, label: "Particle Size" },
+      sphereSize: { value: 1, min: 0.5, max: 3, step: 0.1, label: "Sphere Size" }
     }),
     Motion: folder({
       rotationSpeedX: { value: 0.0005, min: -0.05, max: 0.05, step: 0.0001, label: "Speed X" },
@@ -341,17 +339,16 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
   }, [isDarkMode, set])
 
   // Display JSON in Leva
-  useControls('Mock Data', {
+  const { count: entityCount, entityScale } = useControls('Mock Data', {
     Entity: folder({
-      count: { value: 100, min: 1, max: 2000, step: 1, label: "count" },
+      count: { value: 100, min: 0, max: 2000, step: 1, label: "Count" },
+      entityScale: { value: 1, min: 0.1, max: 2, step: 0.1, label: "Scale" },
     }),
   });
 
   // if (count < entities.length) {
   //    throw new Error("Particles count must be high then entities count");
   // }
-  {console.log(entities.length)}
-  {console.log(entities.slice(0, count).length)}
 
   return (
     <div className="w-full h-full relative">
@@ -368,8 +365,9 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
           rotationSpeedY={rotationSpeedY}
           baseColor={baseColor}
           lineColor={lineColor}
-          members={entities.slice(0, count)} 
+          members={entities.slice(0, entityCount)} 
           isDarkMode={isDarkMode}
+          entityScale={entityScale}
         />
       </Canvas>
     </div>

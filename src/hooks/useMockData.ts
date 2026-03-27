@@ -5,7 +5,6 @@ export interface Entity {
 }
 
 export function useMockData() {
-  // Expanded list of people with their roles
   const people = [
     { role: 'Frontend Developer', first: 'Alice', last: 'Johnson' },
     { role: 'UI/UX Designer', first: 'Bob', last: 'Smith' },
@@ -39,17 +38,14 @@ export function useMockData() {
     { role: 'Creative Director', first: 'David', last: 'Rose' },
   ];
  
-  // Helper function to get random element from array
   const getRandomElement = <T,>(array: T[]): T => {
     return array[Math.floor(Math.random() * array.length)];
   };
  
-  // Extract unique roles and names for maximum randomness
   const roles = [...new Set(people.map(p => p.role))];
   const firstNames = [...new Set(people.map(p => p.first))];
   const lastNames = [...new Set(people.map(p => p.last))];
  
-  // Generate 100 mock entities with true random selection
   const mockEntities: Entity[] = Array.from({ length: 2000 }).map((_, i) => ({
     id: (i + 1).toString(),
     name: `${getRandomElement(firstNames)} ${getRandomElement(lastNames)}`,
