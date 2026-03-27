@@ -10,6 +10,10 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
   const groupRef = useRef<THREE.Group>(null!)
   const pointsRef = useRef<THREE.Points>(null!)
   const linesRef = useRef<THREE.LineSegments>(null!)
+  
+  // Create a separate Group Ref just to perfectly track the hovered particle
+  const trackerRef = useRef<THREE.Group>(null!)
+
   const circleTexture = useMemo(() => new THREE.TextureLoader().load('/Images/dotTexture.png'), [])
 
   const positions = useMemo(() => new Float32Array(count * 3), [count])
@@ -20,7 +24,6 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
 
   const [hoveredEntityIndex, setHoveredEntityIndex] = useState<number | null>(null)
 
-  const meshRef = useRef<Record<number, THREE.Group | null>>({})
   const mouse = useRef({ x: 0, y: 0 })
   const hoverRadius = 0.15
   const maxOutward = 20
@@ -35,10 +38,13 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
   }, [])
 
   const { lineIndices, lineColors } = useMemo(() => {
-    // Determine color palette based on baseColor or create some variations
-    const c1 = new THREE.Color(baseColor)
-    const c2 = c1.clone().offsetHSL(0.1, 0, 0)
-    const c3 = c1.clone().offsetHSL(-0.1, 0, 0)
+    // Default fallback colors based on theme if the default is left untouched
+    const defaultParticleColor = isDarkMode ? baseColor : (baseColor === '#00d2ff' ? '#111111' : baseColor)
+    const defaultLineColor = isDarkMode ? lineColor : (lineColor === '#535353' ? '#c0c0c0' : lineColor)
+
+    const c1 = new THREE.Color(defaultParticleColor)
+    const c2 = c1.clone().offsetHSL(0.05, 0, 0)
+    const c3 = c1.clone().offsetHSL(-0.05, 0, 0)
     const palette = [c1, c2, c3]
 
     const indices: number[] = []
@@ -65,7 +71,7 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
       palette[Math.floor(Math.random() * palette.length)].toArray(colors, i * 3)
     }
 
-    const colLine = new THREE.Color(lineColor)
+    const colLine = new THREE.Color(defaultLineColor)
     for (let i = 0; i < count; i++) {
       for (let j = i + 1; j < count; j++) {
         const dx = positions[i * 3] - positions[j * 3]
@@ -82,14 +88,13 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
     }
 
     return { lineIndices: indices, lineColors: new Float32Array(lineColorsArr) }
-  }, [count, connectDist, baseColor, lineColor, positions, colors])
+  }, [count, connectDist, baseColor, lineColor, isDarkMode])
 
   const linePositions = useMemo(() => new Float32Array(lineIndices.length * 3), [lineIndices])
 
-  // Assign members randomly to some particles
+  // Assign members
   const memberIndexMap = useMemo(() => {
     const indices = Array.from({ length: count }, (_, i) => i)
-    // Shuffle indices
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[indices[i], indices[j]] = [indices[j], indices[i]]
@@ -157,9 +162,18 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
        setHoveredEntityIndex(closestMemberIndex)
     }
 
+    // Explicitly update our tracker group so the HTML dialog accurately sticks to the particle 
+    // even during animation and rotation 
+    if (hoveredEntityIndex !== null && trackerRef.current) {
+       trackerRef.current.position.set(
+          pos[hoveredEntityIndex * 3],
+          pos[hoveredEntityIndex * 3 + 1],
+          pos[hoveredEntityIndex * 3 + 2]
+       )
+    }
+
     pointsRef.current.geometry.attributes.position.needsUpdate = true
     
-    // Update line positions
     for (let i = 0, k = 0; i < lineIndices.length; i += 2) {
       const a = lineIndices[i] * 3
       const b = lineIndices[i + 1] * 3
@@ -191,61 +205,61 @@ function HologramScene({ count, connectDist, size, rotationSpeedX, rotationSpeed
           <bufferAttribute attach="attributes-position" count={linePositions.length / 3} array={linePositions} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={lineColors.length / 3} array={lineColors} itemSize={3} />
         </bufferGeometry>
-        <lineBasicMaterial vertexColors transparent opacity={isDarkMode ? 0.3 : 0.6} />
+        <lineBasicMaterial vertexColors transparent opacity={isDarkMode ? 0.3 : 0.8} />
       </lineSegments>
 
-      {/* Render HTML overlays for Entities */}
-      {hoveredEntityIndex !== null && (
-         <Html
-           position={[
-              targetPositions.current[hoveredEntityIndex * 3],
-              targetPositions.current[hoveredEntityIndex * 3 + 1] + 10,
-              targetPositions.current[hoveredEntityIndex * 3 + 2]
-           ]}
-           center
-           zIndexRange={[100, 0]}
-         >
-           <AnimatePresence>
-              {hoveredEntityIndex !== null && (
-                 <motion.div
-                   initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                   exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                   className={`w-64 p-4 rounded-xl shadow-2xl backdrop-blur-md border border-white/20 select-none ${isDarkMode ? 'bg-black/60 text-white' : 'bg-white/80 text-black'}`}
-                   style={{
-                     boxShadow: `0 0 20px ${memberIndexMap[hoveredEntityIndex].color}40`,
-                     border: `1px solid ${memberIndexMap[hoveredEntityIndex].color}60`
-                   }}
-                 >
-                   <div className="flex items-center gap-3 mb-2">
-                     <div 
-                       className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg"
-                       style={{ backgroundColor: memberIndexMap[hoveredEntityIndex].color, color: '#fff' }}
-                     >
-                        {memberIndexMap[hoveredEntityIndex].name.charAt(0)}
-                     </div>
-                     <div>
-                       <h3 className="font-bold text-lg leading-tight">{memberIndexMap[hoveredEntityIndex].name}</h3>
-                       <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                         {memberIndexMap[hoveredEntityIndex].role}
-                       </p>
-                     </div>
-                   </div>
-                   <p className={`text-sm mt-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
-                     {memberIndexMap[hoveredEntityIndex].description}
-                   </p>
-                 </motion.div>
-              )}
-           </AnimatePresence>
-         </Html>
-      )}
+      {/* Tracked HTML Overlay for hovering */}
+      <group ref={trackerRef}>
+         {hoveredEntityIndex !== null && (
+            <Html
+              position={[0, 0, 0]}
+              center
+              zIndexRange={[100, 0]}
+              className="pointer-events-none"
+            >
+              <AnimatePresence>
+                 {hoveredEntityIndex !== null && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: -25 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 0 }}
+                      className={`relative px-4 py-2 rounded-lg backdrop-blur-xl border shadow-xl w-max flex items-center justify-center gap-2 ${
+                        isDarkMode 
+                          ? 'bg-black/40 border-white/10 text-white shadow-cyan-900/20' 
+                          : 'bg-white/40 border-black/10 text-black shadow-zinc-300/40'
+                      }`}
+                      style={{ 
+                         // Glassmorphism effect 
+                         boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)' 
+                      }}
+                    >
+                      {/* Triangle Pointer down to particle */}
+                      <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b backdrop-blur-xl ${
+                        isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/40 border-black/10'
+                      }`} />
+
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-[13px] leading-tight flex items-center gap-1.5">
+                           <span className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-cyan-400' : 'bg-black'} animate-pulse`}></span>
+                           {memberIndexMap[hoveredEntityIndex].name}
+                        </span>
+                        <span className={`text-[10px] font-medium tracking-wide uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                           {memberIndexMap[hoveredEntityIndex].role}
+                        </span>
+                      </div>
+                    </motion.div>
+                 )}
+              </AnimatePresence>
+            </Html>
+         )}
+      </group>
 
     </group>
   )
 }
 
 export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) {
-  const { entities } = useMockData();
+  const { entities, json } = useMockData();
 
   // Define Leva controls
   const { 
@@ -267,17 +281,29 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
       rotationSpeedY: { value: 0.002, min: 0, max: 0.01, step: 0.0001 },
     }),
     Colors: folder({
-      baseColor: '#11dddd',
+      baseColor: '#00d2ff',
       lineColor: '#535353',
     })
   });
 
+  // Display JSON in Leva
+  useControls('Mock Data Source', {
+     data: {
+        value: json,
+        editable: false,
+        label: "JSON",
+        rows: 15
+     }
+  });
+
   return (
-    <div className={`w-full h-full ${isDarkMode ? 'bg-black' : 'bg-gray-100'}`}>
+    <div className="w-full h-full relative">
       <Canvas camera={{ position: [0, 0, 350], fov: 50 }}>
         <ambientLight intensity={isDarkMode ? 0.5 : 1.5} />
         <pointLight position={[10, 10, 10]} intensity={isDarkMode ? 1 : 2} />
+        {/* Pass count as key to completely regenerate internal buffers on geometry change */}
         <HologramScene 
+          key={count}
           count={count} 
           connectDist={connectDistance} 
           particleSize={particleSize} 

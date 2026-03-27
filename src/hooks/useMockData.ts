@@ -2,70 +2,44 @@ export interface Entity {
   id: string;
   name: string;
   role: string;
-  description: string;
-  color: string;
-  avatarUrl?: string;
 }
 
 export function useMockData() {
   const mockEntities: Entity[] = [
-    {
-      id: "1",
-      name: "Alice Johnson",
-      role: "Lead Developer",
-      description: "Alice is an expert in 3D graphics and React. She built the core rendering engine for the sphere.",
-      color: "#FF5733"
-    },
-    {
-      id: "2",
-      name: "Bob Smith",
-      role: "UI/UX Designer",
-      description: "Bob designed the beautiful interactions and color schemes that make this data visualization pop.",
-      color: "#33FF57"
-    },
-    {
-      id: "3",
-      name: "Charlie Davis",
-      role: "Data Scientist",
-      description: "Charlie provided the mathematical models that dictate how particles connect and flow.",
-      color: "#3357FF"
-    },
-    {
-      id: "4",
-      name: "Diana Lopez",
-      role: "Project Manager",
-      description: "Diana keeps the team on track and ensures all features are delivered on time.",
-      color: "#F033FF"
-    },
-    {
-      id: "5",
-      name: "Evan Wright",
-      role: "Backend Engineer",
-      description: "Evan ensures our data pipelines are fast and reliable, feeding the frontend with real-time updates.",
-      color: "#FFD133"
-    },
-    {
-      id: "6",
-      name: "Fiona Gallagher",
-      role: "QA Tester",
-      description: "Fiona rigorously tests every build, finding bugs before they ever reach our users.",
-      color: "#33FFF5"
-    },
-    {
-      id: "7",
-      name: "George Mason",
-      role: "Marketing Lead",
-      description: "George crafts the narrative around our product and helps it reach a wider audience.",
-      color: "#FF3333"
-    },
-    {
-      id: "8",
-      name: "Hannah Abbott",
-      role: "Support Specialist",
-      description: "Hannah helps our users get the most out of the visualization tool, answering questions night and day.",
-      color: "#57FF33"
-    }
+    { id: "1", name: "Alice Johnson", role: "Frontend Developer" },
+    { id: "2", name: "Bob Smith", role: "UI/UX Designer" },
+    { id: "3", name: "Charlie Davis", role: "Data Scientist" },
+    { id: "4", name: "Diana Lopez", role: "Project Manager" },
+    { id: "5", name: "Evan Wright", role: "Backend Engineer" },
+    { id: "6", name: "Fiona Gallagher", role: "QA Tester" },
+    { id: "7", name: "George Mason", role: "Marketing Lead" },
+    { id: "8", name: "Hannah Abbott", role: "Support Specialist" },
+    { id: "9", name: "Ian Chen", role: "DevOps Engineer" },
+    { id: "10", name: "Julia Roberts", role: "Product Owner" },
+    { id: "11", name: "Kevin Hart", role: "Content Writer" },
+    { id: "12", name: "Linda Evans", role: "HR Manager" },
+    { id: "13", name: "Michael Scott", role: "Regional Manager" },
+    { id: "14", name: "Nina Dobrev", role: "Lead Designer" },
+    { id: "15", name: "Oscar Diaz", role: "Security Analyst" },
+    { id: "16", name: "Paul Atreides", role: "Cloud Architect" },
+    { id: "17", name: "Quinn Fabray", role: "Social Media Manager" },
+    { id: "18", name: "Rachel Green", role: "Sales Executive" },
+    { id: "19", name: "Sam Winchester", role: "Operations Director" },
+    { id: "20", name: "Tina Cohen", role: "Customer Success" },
+    { id: "21", name: "Uma Thurman", role: "Full Stack Engineer" },
+    { id: "22", name: "Victor Stone", role: "Hardware Engineer" },
+    { id: "23", name: "Wendy Wu", role: "Mobile Developer" },
+    { id: "24", name: "Xavier Woods", role: "DB Administrator" },
+    { id: "25", name: "Yara Shahidi", role: "QA Engineer" },
+    { id: "26", name: "Zachary Levi", role: "IT Support" },
+    { id: "27", name: "Alyssa Milano", role: "Business Analyst" },
+    { id: "28", name: "Brian O'Conner", role: "Logistics Coordinator" },
+    { id: "29", name: "Chloe Decker", role: "Legal Advisor" },
+    { id: "30", name: "David Rose", role: "Creative Director" }
   ];
 
-  return { entities: mockEntities };
+  return { 
+    entities: mockEntities, 
+    json: JSON.stringify(mockEntities, null, 2)
+  };
 }
