@@ -16,7 +16,7 @@ function HologramScene({
   const linesRef = useRef<THREE.LineSegments>(null!)
   const trackersRef = useRef<Map<number, THREE.Group>>(new Map())
 
-  const circleTexture = useMemo(() => new THREE.TextureLoader().load('/Images/dotTexture.png'), [])
+  const circleTexture = useMemo(() => new THREE.TextureLoader().load('https://raw.githubusercontent.com/ZAR0X/resources/refs/heads/main/3sphere/dotTexture.png'), [])
 
   // ---------- 1. Static Geometry Arrays ----------
   const { positions, originalPositions } = useMemo(() => {
