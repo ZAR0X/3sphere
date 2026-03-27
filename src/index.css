@@ -17,6 +17,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Backgroud */
+.bg_dark {
+  background: #000000;
+}
+
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

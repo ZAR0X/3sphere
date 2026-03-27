@@ -15,12 +15,12 @@ function App() {
   }, [isDarkMode]);
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 overflow-hidden ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-black'}`}>
+    <div className={`min-h-screen transition-colors duration-500 overflow-hidden ${isDarkMode ? 'bg_dark text-white' :'text-black'}`}>
       
       {/* Theme Toggle Button */}
       <button 
         onClick={() => setIsDarkMode(!isDarkMode)}
-        className="fixed top-4 right-4 z-50 p-3 rounded-full backdrop-blur-md bg-white/10 dark:bg-black/20 border border-gray-200 dark:border-white/20 hover:scale-110 transition-all cursor-pointer shadow-lg"
+        className="fixed top-4 left-4 z-50 p-3 rounded-full backdrop-blur-md bg-white/10 dark:bg-black/20 border border-gray-200 dark:border-white/20 hover:scale-110 transition-all cursor-pointer shadow-lg"
         title="Toggle Theme"
       >
         {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-slate-800" />}
