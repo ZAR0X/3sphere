@@ -15,8 +15,8 @@ function HologramScene({
   const pointsRef = useRef<THREE.Points>(null!)
   const linesRef = useRef<THREE.LineSegments>(null!)
   
-  // Create a separate Group Ref just to perfectly track the hovered particle
-  const trackerRef = useRef<THREE.Group>(null!)
+  // Create a dictionary of Tracker Refs to perfectly track each hovered particle
+  const trackersRef = useRef<Map<number, THREE.Group>>(new Map())
 
   const circleTexture = useMemo(() => new THREE.TextureLoader().load('/Images/dotTexture.png'), [])
 
@@ -26,7 +26,7 @@ function HologramScene({
   const targetPositions = useRef<Float32Array>(new Float32Array(count * 3))
   const velocities = useRef<Float32Array>(new Float32Array(count * 3).fill(0))
 
-  const [hoveredEntityIndex, setHoveredEntityIndex] = useState<number | null>(null)
+  const [hoveredEntityIndices, setHoveredEntityIndices] = useState<number[]>([])
 
   const mouse = useRef({ x: 0, y: 0 })
   const hoverRadius = 0.15
@@ -128,8 +128,7 @@ function HologramScene({
     const pos = pointsRef.current.geometry.attributes.position.array as Float32Array
     const vec = new THREE.Vector3()
     
-    let closestMemberIndex: number | null = null
-    let closestDistSq = Infinity
+    let newHoveredIndices: number[] = []
 
     for (let i = 0; i < count; i++) {
       const idx = i * 3
@@ -142,10 +141,7 @@ function HologramScene({
       
       // If it's a member and within tight hover radius, track it for HTML popup
       if (memberIndexMap[i] && distSq < 0.005) {
-         if (distSq < closestDistSq) {
-            closestDistSq = distSq
-            closestMemberIndex = i
-         }
+         newHoveredIndices.push(i)
       }
 
       const dir = new THREE.Vector3(originalPositions[idx], originalPositions[idx + 1], originalPositions[idx + 2]).normalize()
@@ -170,18 +166,35 @@ function HologramScene({
       pos[idx + 2] = targetPositions.current[idx + 2]
     }
     
-    if (closestMemberIndex !== hoveredEntityIndex) {
-       setHoveredEntityIndex(closestMemberIndex)
+    // Check if the array of hovered indices has changed purely by length and items
+    // to avoid excessive re-renders
+    let isChanged = false
+    if (newHoveredIndices.length !== hoveredEntityIndices.length) {
+       isChanged = true
+    } else {
+       for (let i = 0; i < newHoveredIndices.length; i++) {
+          if (newHoveredIndices[i] !== hoveredEntityIndices[i]) {
+             isChanged = true
+             break
+          }
+       }
+    }
+    
+    if (isChanged) {
+       setHoveredEntityIndices(newHoveredIndices)
     }
 
-    // Explicitly update our tracker group so the HTML dialog accurately sticks to the particle 
-    if (hoveredEntityIndex !== null && trackerRef.current) {
-       trackerRef.current.position.set(
-          pos[hoveredEntityIndex * 3],
-          pos[hoveredEntityIndex * 3 + 1],
-          pos[hoveredEntityIndex * 3 + 2]
-       )
-    }
+    // Explicitly update ALL our tracker groups so the HTML dialogs accurately stick to their particles 
+    hoveredEntityIndices.forEach(index => {
+       const tracker = trackersRef.current.get(index)
+       if (tracker) {
+          tracker.position.set(
+             pos[index * 3],
+             pos[index * 3 + 1],
+             pos[index * 3 + 2]
+          )
+       }
+    })
 
     pointsRef.current.geometry.attributes.position.needsUpdate = true
     
@@ -220,9 +233,15 @@ function HologramScene({
         <lineBasicMaterial vertexColors transparent opacity={isDarkMode ? 0.3 : 0.8} />
       </lineSegments>
 
-      {/* Tracked HTML Overlay for hovering */}
-      <group ref={trackerRef}>
-         {hoveredEntityIndex !== null && (
+      {/* Render Tracked HTML Overlays for all hovered members */}
+      {hoveredEntityIndices.map(index => (
+         <group 
+           key={index} 
+           ref={(el) => {
+              if (el) trackersRef.current.set(index, el)
+              else trackersRef.current.delete(index)
+           }}
+         >
             <Html
               position={[0, 0, 0]}
               center
@@ -230,38 +249,36 @@ function HologramScene({
               className="pointer-events-none"
             >
               <AnimatePresence>
-                 {hoveredEntityIndex !== null && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: -25 }}
-                      exit={{ opacity: 0, scale: 0.8, y: 0 }}
-                      className={`relative px-4 py-2 rounded-lg backdrop-blur-xl border shadow-xl w-max flex items-center justify-center gap-2 ${
-                        isDarkMode 
-                          ? 'bg-black/40 border-white/10 text-white shadow-cyan-900/20' 
-                          : 'bg-white/40 border-black/10 text-black shadow-zinc-300/40'
-                      }`}
-                      style={{ boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}
-                    >
-                      {/* Triangle Pointer down to particle */}
-                      <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b backdrop-blur-xl ${
-                        isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/40 border-black/10'
-                      }`} />
+                 <motion.div
+                   initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                   animate={{ opacity: 1, scale: 1, y: -25 }}
+                   exit={{ opacity: 0, scale: 0.8, y: 0 }}
+                   className={`relative px-4 py-2 rounded-lg backdrop-blur-xl border shadow-xl w-max flex items-center justify-center gap-2 ${
+                     isDarkMode 
+                       ? 'bg-black/40 border-white/10 text-white shadow-cyan-900/20' 
+                       : 'bg-white/40 border-black/10 text-black shadow-zinc-300/40'
+                   }`}
+                   style={{ boxShadow: isDarkMode ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)' }}
+                 >
+                   {/* Triangle Pointer down to particle */}
+                   <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b backdrop-blur-xl ${
+                     isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/40 border-black/10'
+                   }`} />
 
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-[13px] leading-tight flex items-center gap-1.5">
-                           <span className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-cyan-400' : 'bg-black'} animate-pulse`}></span>
-                           {memberIndexMap[hoveredEntityIndex].name}
-                        </span>
-                        <span className={`text-[10px] font-medium tracking-wide uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                           {memberIndexMap[hoveredEntityIndex].role}
-                        </span>
-                      </div>
-                    </motion.div>
-                 )}
+                   <div className="flex flex-col">
+                     <span className="font-semibold text-[13px] leading-tight flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-cyan-400' : 'bg-black'} animate-pulse`}></span>
+                        {memberIndexMap[index].name}
+                     </span>
+                     <span className={`text-[10px] font-medium tracking-wide uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {memberIndexMap[index].role}
+                     </span>
+                   </div>
+                 </motion.div>
               </AnimatePresence>
             </Html>
-         )}
-      </group>
+         </group>
+      ))}
 
     </group>
   )
