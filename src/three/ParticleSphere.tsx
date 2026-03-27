@@ -5,7 +5,6 @@ import * as THREE from 'three'
 import { useControls, folder } from 'leva'
 import { useMockData } from '../hooks/useMockData'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle } from 'lucide-react'
 
 function HologramScene({ 
    count, connectDist, particleSize, 
