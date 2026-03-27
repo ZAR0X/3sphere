@@ -1,66 +1,51 @@
-# 3Sphere
+# 3Sphere: Interactive Entity Particle Sphere
 
-An interactive, highly scalable 3D particle sphere component designed for React environments. This project generates connected networks of data-mapped entities, enabling real-time visual adjustments, smooth WebGL interactions, and robust performance via React Three Fiber.
+A stunning, interactive 3D particle sphere built with React Three Fiber. Each particle in the sphere represents a connection or an entity, making it perfect for visualizing networks, teams, social graphs, or displaying team members in a highly engaging 3D space.
 
 ## Features
 
-- **Interactive Nodes:** Hovering over the mapped node clusters reveals dynamic, glassmorphic data tooltips populated natively from your data sources.
-- **Leva Integration:** Features a comprehensive GUI to instantly modify physics geometries (particle counts, line distances), colors, scale, and multi-axis rotation speeds.
-- **Theme Engine:** Fully supports Light and Dark modes with automatic palette transitions mapping directly into the WebGL renderer.
-- **Data Scaling Bounds:** Protected by an inherent error-layer guaranteeing smooth data associations without phantom nodes or exceptions.
+- **Entity Visualization**: Automatically maps data objects (entities with a name, role, description, and color) to particles in the sphere.
+- **Interactive Hover Effects**: Hovering near a mapped particle reveals a beautiful, glassmorphic card showing the entity's data.
+- **Dynamic Controls**: Includes a built-in `Leva` GUI to tweak the scene in real-time:
+  - Particle count
+  - Particle size
+  - Connection distance
+  - Base colors for particles and connection lines
+  - Rotation speeds
+- **Themes**: Full Light and Dark mode support that updates the background, HTML overlays, and scene lighting.
 
-## Installation
+## Setup
 
-Ensure you have a React or Vite environment natively running, alongside standard dependencies:
+1. **Install dependencies**:
+   \`\`\`bash
+   npm install
+   \`\`\`
 
-```bash
-npm install
-npm run dev
-```
+2. **Start the development server**:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
-If you plan to extract the component into another project, you must ensure the following core libraries are installed:
+## How it works
 
-```bash
-npm install three @react-three/fiber @react-three/drei framer-motion leva lucide-react
-```
+The core of the logic resides in `src/three/ParticleSphere.tsx`.
 
-## How to Input Custom Data
+1. **Data Source**: Look at `src/hooks/useMockData.ts`. It provides an array of `Entity` objects. The `ParticleSphere` component takes this array and randomly assigns each entity to a specific particle vertex in the 3D space.
+2. **Customization**: The styling of the popup card is handled inside `HologramScene` using `@react-three/drei`'s `Html` block mixed with `framer-motion` for smooth enter/exit animations. Data for the hovered entity is parsed and styled with Tailwind.
 
-The repository utilizes a mock data system within `src/hooks/useMockData.ts`. This structure strictly requires your dataset to follow an array consisting of objects bearing at least a `name` and `role` string formatting (an `id` string is optionally recommended).
+## Using in your own project
 
-### Example Data Integration
-Replace the local output in `useMockData.ts` with your API hook, state, or standard array data. 
+To integrate this into another React application, simply copy the `ParticleSphere.tsx` and the `useMockData.ts` (or provide your own data source). Ensure you have `@react-three/fiber`, `@react-three/drei`, `three`, `leva`, and `framer-motion` installed.
 
-```typescript
-export interface Entity {
-  id: string;
-  name: string;
-  role: string;
+\`\`\`tsx
+import ParticleSphere from './three/ParticleSphere';
+
+function MyDashboard() {
+const isDarkMode = true; // or whatever your logic is
+return (
+<div style={{ width: '100vw', height: '100vh' }}>
+<ParticleSphere isDarkMode={isDarkMode} />
+</div>
+);
 }
-
-// Ensure the array of Entities matches your Particle count requirement.
-export function useMockData() {
-  const customData: Entity[] = [
-    { id: "01", name: "System Admin", role: "DevOps" },
-    { id: "02", name: "Network Architect", role: "Infrastructure" }
-  ];
-
-  return { 
-    entities: customData, 
-    json: JSON.stringify(customData, null, 2)
-  };
-}
-```
-
-The underlying `ParticleSphere` will naturally map the length of `entities` against local indices, distributing them procedurally across the sphere's surface based on standard seeded randomization.
-
-## Tuning and Settings
-
-You have programmatic control over how the component handles variables via the `useControls` definitions inside `<ParticleSphere />`.
-
-- **count**: Sets the exact WebGL Buffer counts. The system intentionally throws an exception boundary if `count` falls beneath the length of external `entities`. 
-- **connectDistance**: Operates WebGL line rendering indices natively; modifying establishes tighter node networks. 
-- **sphereSize / particleSize**: Independent scalars mapping to mathematical origins in Local space.
-- **Theme Adjustments**: The Leva UI connects bi-directionally to the App's Theme, dynamically adjusting the colors.
-
-*Note: Custom palettes applied inside `App.tsx` via the Leva UI are overridden by manual Theme manipulation.*
+\`\`\`

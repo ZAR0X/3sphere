@@ -326,7 +326,7 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
     }),
     Colors: folder({
       baseColor: '#00d2ff',
-      lineColor: '#535353',
+      lineColor: '#9a9a9a',
     })
   }));
 
@@ -334,7 +334,7 @@ export default function ParticleSphere({ isDarkMode }: { isDarkMode: boolean }) 
   useEffect(() => {
      set({
         baseColor: isDarkMode ? '#00d2ff' : '#0a0a0a',
-        lineColor: isDarkMode ? '#535353' : '#a0a0a0'
+        lineColor: isDarkMode ? '#9a9a9a' : '#a0a0a0'
      })
   }, [isDarkMode, set])
 
