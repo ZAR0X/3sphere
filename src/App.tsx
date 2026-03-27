@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ParticleSphere from './three/ParticleSphere';
 import { Leva } from 'leva';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Home, Github } from 'lucide-react';
 
 function App() {
   const userThenePrefrence = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -17,7 +17,16 @@ function App() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 overflow-hidden ${isDarkMode ? 'bg_dark text-white' :'text-black'}`}>
-      
+      {/* {Home Button} */}
+      <div className="fixed bottom-4 left-4 z-50 flex items-center rounded-full backdrop-blur-md bg-white/10 dark:bg-black/20 border border-gray-200 dark:border-white/20 shadow-lg">
+  <button onClick={() => window.location.href = 'https://zarox.is-a.dev'} className="p-3 rounded-full transition-all hover:scale-110 cursor-pointer">
+    <Home size={20} />
+  </button>
+  <button onClick={() => window.location.href = 'https://github.com/ZAR0X/3sphere'} className="p-3 rounded-full transition-all hover:scale-110 cursor-pointer">
+    <Github size={20} />
+  </button>
+</div>
+
       {/* Theme Toggle Button */}
       <button 
         onClick={() => setIsDarkMode(!isDarkMode)}
